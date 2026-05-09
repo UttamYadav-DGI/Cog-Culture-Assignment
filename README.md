@@ -1,323 +1,525 @@
-# Fact-Check Agent
+# Fact-Check Agent 🔍
 
-Fact-Check Agent is a Streamlit web app for automated PDF fact-checking. It acts as a lightweight "truth layer" for marketing documents, reports, pitch decks, and other PDFs that may contain outdated, unsupported, or hallucinated statistics.
+> **Automated PDF Fact-Checking with Gemini LLM**
+> 
+> Verify claims in PDFs against live web evidence using semantic analysis powered by Google Gemini 2.5 Flash.
 
-Users upload a PDF, the app extracts factual claims, searches live web evidence, and produces a claim-by-claim report with verdicts, sources, and corrected facts where possible.
+---
 
-## Project Objective
+## 📋 Table of Contents
 
-Marketing content often includes claims such as:
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [How It Works](#how-it-works)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [API Reference](#api-reference)
+- [Verdict Definitions](#verdict-definitions)
+- [Limitations & Future Work](#limitations--future-work)
 
-- "The market is worth $500 billion in 2024."
-- "The product has 99.9% uptime."
-- "The company has 20 million users."
-- "Revenue grew 45% year over year."
-- "This standard was released in 2023."
+---
 
-These claims can become stale or may be fabricated. This app helps identify those risks by checking the PDF against live web data.
+## 📌 Overview
 
-## Core Features
+**Fact-Check Agent** is a lightweight, web-based fact-checking system designed to verify claims in marketing documents, reports, pitch decks, and other PDFs.
 
-- Upload a PDF through a simple web interface.
-- Extract claims containing statistics, dates, financial figures, and technical figures.
-- Generate targeted search queries for each extracted claim.
-- Search the live web for corroborating evidence.
-- Compare PDF values against values found in search evidence.
-- Classify each claim as `Verified`, `Inaccurate`, or `False`.
-- Show supporting links and snippets for every checked claim.
-- Provide corrected or closest matching facts when the PDF claim appears inaccurate.
-- Download a CSV report.
-- View a machine-readable JSON report.
+### The Problem
+Marketing and business documents often contain:
+- **Outdated statistics** ("We have 10 million users" - from 2022)
+- **Unsupported claims** (numbers with no reliable source)
+- **Hallucinated data** (fabricated or inflated metrics)
 
-## Verdict Definitions
+### The Solution
+Upload a PDF → Extract claims → Search live web evidence → Compare → Generate verified report
 
-| Verdict | Meaning |
-| --- | --- |
-| `Verified` | The claim value in the PDF matches evidence found online. |
-| `Inaccurate` | Related evidence exists, but the PDF value does not match the live web evidence. |
-| `False` | No useful corroborating evidence was found for the claim. |
+---
 
-## Tech Stack
+## ✨ Key Features
 
-- Python
-- Streamlit
-- pypdf
-- Requests
-- BeautifulSoup
-- DuckDuckGo HTML search fallback
-- Optional Tavily Search API integration
+### 📄 PDF Processing
+- Extract claims from up to 25 pages
+- Identify claim types: financial, statistics, dates, technical specs, figures
+- Support for selectable text PDFs (OCR not included)
 
-## Project Structure
+### 🔎 Intelligent Claim Extraction
+- Automatically identifies claims containing:
+  - Financial figures ($, revenue, valuation)
+  - Statistics (%, growth rates)
+  - Dates (years, quarters, launch dates)
+  - Technical specs (bandwidth, capacity)
+  - Quantifiable metrics (users, employees, downloads)
 
-```text
-.
-├── app.py                  # Main Streamlit application
-├── requirements.txt        # Python dependencies
-├── README.md               # Project documentation
-├── render.yaml             # Render deployment config
-├── Procfile                # Process file for web deployment platforms
-├── runtime.txt             # Python runtime version for deployment
-├── .gitignore              # Files ignored by git
-└── .streamlit/
-    └── config.toml         # Streamlit config
+### 🌐 Live Web Verification
+- Search live web for corroborating evidence
+- Dual search integration:
+  - **Tavily Search API** (primary - more reliable)
+  - **DuckDuckGo** (fallback - always available)
+
+### 🤖 Semantic Analysis
+- Uses **Google Gemini 2.5 Flash** for intelligent fact verification
+- Compares claim semantics against evidence semantics
+- Generates structured JSON verdicts with confidence levels
+
+### 📊 Comprehensive Reporting
+- Claim-by-claim verdict breakdown
+- Evidence links and snippets for transparency
+- Confidence levels (High/Medium/Low)
+- CSV export for integration with other tools
+- JSON API for programmatic access
+
+---
+
+## 🛠 Technology Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Backend** | Python 3.11 |
+| **Web Framework** | Streamlit (frontend) / FastAPI-compatible (API) |
+| **PDF Processing** | pypdf 5.0.1 |
+| **Web Scraping** | BeautifulSoup4 4.12.3 |
+| **HTTP Client** | Requests 2.32.3 |
+| **LLM** | Google Gemini 2.5 Flash |
+| **Search** | Tavily Search API + DuckDuckGo |
+| **Deployment** | Vercel, Streamlit Cloud, or Render |
+
+### ⚠️ Important: Gemini Only, No OpenAI
+- **NO OpenAI dependencies**
+- **ONLY Google Gemini LLM** is used
+- Model: `gemini-2.5-flash`
+- Temperature: 0 (deterministic)
+- Structured JSON output
+
+---
+
+## 📁 Project Structure
+
+```
+fact-check-agent/
+├── app.py                      # Main Streamlit web application
+├── factcheck_core.py           # Core fact-checking logic
+├── api/
+│   └── factcheck.py           # Vercel serverless API endpoint
+├── public/
+│   └── index.html             # Frontend HTML interface
+├── requirements.txt            # Core Python dependencies
+├── requirements-streamlit.txt   # Streamlit-specific dependencies
+├── vercel.json                # Vercel deployment configuration
+├── render.yaml                # Render deployment configuration
+├── Procfile                   # Web process file
+├── runtime.txt                # Python 3.11.9
+├── .gitignore                 # Git ignore rules
+├── .streamlit/
+│   └── config.toml            # Streamlit configuration
+└── README.md                  # This file
 ```
 
-## How It Works
+### Key Files Explained
 
-### 1. PDF Text Extraction
+| File | Purpose |
+|------|---------|
+| `factcheck_core.py` | Core extraction, search, LLM integration |
+| `app.py` | Streamlit UI with upload, results, CSV export |
+| `api/factcheck.py` | Vercel serverless API (multipart form handler) |
+| `public/index.html` | Standalone frontend (works with API) |
 
-The app reads the uploaded PDF using `pypdf`. It extracts selectable text from up to 25 pages by default.
+---
 
-Current limitation: scanned image-only PDFs require OCR, which is not included in this lightweight version.
+## 🔄 How It Works
 
-### 2. Claim Extraction
+### Step 1: PDF Text Extraction
+```
+User uploads PDF
+    ↓
+pypdf extracts text from up to 25 pages
+    ↓
+Sentences are normalized and split
+```
 
-The app scans PDF sentences and selects claims that contain measurable values, including:
+### Step 2: Claim Extraction
+```
+For each sentence:
+  - Extract numeric values (%, $, dates, specs)
+  - Classify type (financial, statistic, date, technical, figure)
+  - Build search query from keywords + values
+    ↓
+Max 24 claims returned
+```
 
-- Percentages
-- Money values
-- Millions, billions, and trillions
-- Years and quarters
-- User, customer, employee, revenue, and download figures
+### Step 3: Web Evidence Search
+```
+For each claim:
+  - Generate search query
+  - Try Tavily API (if TAVILY_API_KEY set)
+  - Fallback to DuckDuckGo
+  - Return up to 6 results
+```
 
-Examples of extracted claim types:
+### Step 4: Semantic Verification
+```
+For each claim + evidence pair:
+  
+  If GEMINI_API_KEY is set:
+    → Use Gemini 2.5 Flash to analyze semantic entailment
+    → Returns structured verdict (Verified/Inaccurate/False)
+    → Includes confidence and reasoning
+  
+  Else:
+    → Use deterministic heuristics:
+      - Pattern matching (FIFA World Cup, founded in, acquired)
+      - Value matching with tolerance
+      - Keyword overlap scoring
+    → Returns fallback verdict
+```
 
-- `financial`
-- `statistic`
-- `date`
-- `technical`
-- `figure`
+### Step 5: Report Generation
+```
+Results aggregated with:
+  - Verdict counts
+  - Claim-by-claim details
+  - Evidence links
+  - Corrected facts (when available)
+    ↓
+Output as: Streamlit UI + CSV + JSON
+```
 
-### 3. Web Verification
+---
 
-For each claim, the app builds a search query from:
+## 🚀 Getting Started
 
-- Important keywords in the claim
-- Numeric values in the claim
-- Context terms such as `official source latest`
+### Prerequisites
+- Python 3.11+
+- pip or poetry
+- (Optional) Gemini API key for semantic verification
+- (Optional) Tavily API key for better search
 
-The app first uses Tavily if `TAVILY_API_KEY` is configured. If no Tavily key is present, it falls back to DuckDuckGo HTML search.
+### Installation
 
-### 4. Evidence Comparison
-
-The app extracts values from search result titles and snippets, then compares them with the PDF values.
-
-The comparison supports:
-
-- Exact textual matches
-- Numeric matches with small tolerance
-- Equivalent scaled numbers such as million, billion, trillion, `m`, `bn`, and `k`
-
-### 5. Report Generation
-
-The app displays:
-
-- Extracted claims table
-- Verdict counts
-- Claim-level explanation
-- Evidence links
-- Search query used
-- Correct or closest matching fact when available
-- CSV download
-- JSON output
-
-## Run Locally
-
-### Run the Streamlit app locally
-
-From the project folder, install the Streamlit dependencies:
-
+#### Option 1: Streamlit Web App (Easiest)
 ```bash
-cd /Users/uttamyadav/Desktop/assignmentttt
-python3 -m pip install -r requirements-streamlit.txt
-python3 -m streamlit run app.py
+# Clone or download the repository
+cd fact-check-agent
+
+# Install dependencies
+pip install -r requirements-streamlit.txt
+
+# Run the app
+streamlit run app.py
 ```
 
-Open the app in your browser:
+The app will open at `http://localhost:8501`
 
-```text
-http://localhost:8501
-```
-
-If Streamlit chooses another port, use the URL printed in the terminal.
-
-### Run the Vercel version locally
-
-The Vercel deployment uses the static frontend in `public/index.html` and the serverless API in `api/factcheck.py`.
-
-Install the Vercel dependencies:
-
+#### Option 2: API Only (Vercel)
 ```bash
-python3 -m pip install -r requirements.txt
+# Install core dependencies
+pip install -r requirements.txt
+
+# (Optional) Test locally with Vercel CLI
+npm install -g vercel
+vercel dev
 ```
 
-Then use the Vercel CLI:
+Local API will be at `http://localhost:3000`
 
+#### Option 3: Docker (Coming Soon)
+Docker support not yet implemented. Use pip installation above.
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+#### Required for LLM-based Verification
 ```bash
-npx vercel dev
-```
-
-The local Vercel URL is usually `http://localhost:3000`.
-
-## Environment Variables
-
-The app works without paid API keys by using DuckDuckGo fallback search.
-
-For semantic contradiction reasoning, set a Gemini API key. The semantic verifier uses Gemini only.
-
-Gemini:
-
-```bash
+GEMINI_API_KEY=<your-gemini-api-key>
 FACTCHECK_LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MAX_TOKENS=1600
-FACTCHECK_MAX_WORKERS=1
 ```
 
-For better and more reliable search results, set:
-
+#### Optional for Enhanced Search
 ```bash
-TAVILY_API_KEY=your_tavily_api_key
+TAVILY_API_KEY=<your-tavily-api-key>
 ```
 
-On Streamlit Cloud, add this under app secrets:
+#### Optional Tuning
+```bash
+GEMINI_MAX_TOKENS=1600          # Max LLM response tokens
+GEMINI_TIMEOUT=35               # LLM request timeout (seconds)
+GEMINI_MAX_RETRIES=2            # Retry failed LLM calls
+FACTCHECK_MAX_WORKERS=1         # Parallel claim workers (1 with LLM, 4+ without)
+```
 
+### Streamlit Secrets (Cloud Deployment)
+
+On Streamlit Cloud, add secrets via UI or `.streamlit/secrets.toml`:
 ```toml
+GEMINI_API_KEY = "your-gemini-api-key"
 FACTCHECK_LLM_PROVIDER = "gemini"
-GEMINI_API_KEY = "your_gemini_api_key"
 GEMINI_MAX_TOKENS = "1600"
 FACTCHECK_MAX_WORKERS = "1"
-TAVILY_API_KEY = "your_tavily_api_key"
+TAVILY_API_KEY = "your-tavily-api-key"
 ```
 
-## Deployment
+---
 
-Deployment is mandatory for the assignment. The app is prepared for both Streamlit Community Cloud and Render.
+## 🌍 Deployment
 
-### Deploy on Streamlit Community Cloud
+### Option 1: Vercel (Recommended for API)
 
-1. Push this project to a GitHub repository.
-2. Go to <https://share.streamlit.io/>.
-3. Click `New app`.
-4. Select the repository.
-5. Set the main file path to:
+#### Prerequisites
+- Vercel account
+- GitHub repository connected to Vercel
 
-```text
-app.py
-```
+#### Steps
+1. Push code to GitHub
+2. Connect repo to Vercel
+3. Set environment variables in Vercel dashboard:
+   - `GEMINI_API_KEY`
+   - `FACTCHECK_LLM_PROVIDER=gemini`
+   - `TAVILY_API_KEY` (optional)
+4. Deploy: `vercel --prod`
 
-6. Deploy the app.
-7. Optional: add `TAVILY_API_KEY` in Streamlit secrets for stronger live search.
-
-### Deploy on Render
-
-This repository includes `render.yaml`, `Procfile`, and `runtime.txt`.
-
-Manual Render settings:
-
-```text
-Build Command: pip install -r requirements-streamlit.txt
-Start Command: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
-```
-
-The included `render.yaml` uses:
-
-```yaml
-services:
-  - type: web
-    name: fact-check-agent
-    env: python
-    plan: free
-    buildCommand: pip install -r requirements-streamlit.txt
-    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
-```
-
-### Deploy on Vercel
-
-This project also includes a Vercel-compatible implementation:
-
-- `public/index.html` provides the upload interface.
-- `api/factcheck.py` provides the Python serverless fact-check API.
-- `vercel.json` routes `/api/factcheck` to the API and all other paths to the frontend.
-
-Deploy with:
-
+#### Test Deployment
 ```bash
-npx vercel --prod
+curl -X POST https://your-project.vercel.app/api/factcheck \
+  -F "pdf=@document.pdf"
 ```
 
-Set `TAVILY_API_KEY` in Vercel project environment variables for stronger live search.
-Set `GEMINI_API_KEY` plus `FACTCHECK_LLM_PROVIDER=gemini` to enable Gemini semantic contradiction detection.
+---
 
-## Usage Guide
+### Option 2: Streamlit Cloud (Easiest)
 
-1. Open the deployed app URL.
-2. Upload a PDF.
-3. Review the extracted claims table.
-4. Click `Run live fact-check`.
-5. Review the verdict summary.
-6. Expand each claim to inspect evidence and source links.
-7. Download the CSV report if needed.
+#### Steps
+1. Push code to GitHub
+2. Go to [https://share.streamlit.io/](https://share.streamlit.io/)
+3. Click "New app"
+4. Select repository and set main file to `app.py`
+5. Add secrets via dashboard
+6. Deploy
 
-## Example Output
+Your app will be live at `https://share.streamlit.io/your-username/your-repo/app.py`
 
-For each claim, the app returns a structured result similar to:
+---
 
+### Option 3: Render (Free Tier Available)
+
+#### Steps
+1. Push code to GitHub
+2. Go to [https://render.com](https://render.com)
+3. Create new Web Service
+4. Connect GitHub repo
+5. Build command: `pip install -r requirements-streamlit.txt`
+6. Start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
+7. Add environment variables
+8. Deploy
+
+---
+
+## 📡 API Reference
+
+### POST `/api/factcheck`
+
+**Purpose:** Fact-check a PDF document
+
+**Request:**
+- **Method:** POST
+- **Content-Type:** multipart/form-data
+- **Parameter:** `pdf` (file)
+
+**Example:**
+```bash
+curl -X POST https://your-app.vercel.app/api/factcheck \
+  -F "pdf=@marketing_deck.pdf"
+```
+
+**Response:**
 ```json
 {
-  "verdict": "Inaccurate",
-  "confidence": "Medium",
-  "page": 2,
-  "claim": "The company generated $50 billion in revenue in 2024.",
-  "type": "financial",
-  "pdf_values": "$50 billion, 2024",
-  "reason": "Related sources were found, but the specific value in the PDF did not match the web evidence.",
-  "correct_fact": "Closest values found online: $42.1 billion, 2024.",
-  "sources": ["https://example.com/source"]
+  "claims": [
+    {
+      "id": 1,
+      "text": "The company has 50 million users.",
+      "kind": "figure",
+      "page": 2,
+      "values": ["50 million"]
+    }
+  ],
+  "results": [
+    {
+      "id": 1,
+      "verdict": "Inaccurate",
+      "confidence": "Medium",
+      "claim": "The company has 50 million users.",
+      "reason": "Web evidence shows the company reported 42 million users in Q4 2024.",
+      "correct_fact": "The company has 42 million users (Q4 2024).",
+      "sources": [
+        {
+          "title": "Company Q4 2024 Earnings Report",
+          "url": "https://example.com/earnings",
+          "snippet": "...reported 42 million users...",
+          "source": "example.com"
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "Verified": 8,
+    "Inaccurate": 3,
+    "False": 2
+  }
 }
 ```
 
-## Evaluation Notes
+---
 
-The evaluator can test the app with a "Trap Document" containing false or outdated claims. The app is designed to flag suspicious claims by:
+## 📊 Verdict Definitions
 
-- Extracting measurable statements from the PDF.
-- Searching current web evidence.
-- Comparing numeric and date values.
-- Highlighting mismatches instead of silently accepting the PDF.
+| Verdict | Meaning | Example |
+|---------|---------|---------|
+| **Verified** | PDF claim matches web evidence semantically | PDF: "Founded in 1998" ✓ Web: "Google was founded in 1998" |
+| **Inaccurate** | Related evidence exists but values don't match | PDF: "Founded in 2000" ✗ Web: "Founded in 1998" |
+| **False** | No web evidence supports the claim | PDF: "We have 500M users" - No reliable source found |
 
-The best trap-document results will come from claims with public web evidence, such as company revenue, market size, launch dates, user counts, or technical specifications.
+### Confidence Levels
+- **High:** Strong semantic match or direct value match
+- **Medium:** Related evidence with minor discrepancies
+- **Low:** Limited evidence or uncertain match
 
-## Limitations
+---
 
-- The app does not perform OCR on scanned PDFs.
-- Search snippets may be incomplete or unavailable depending on the source.
-- DuckDuckGo fallback search can be less reliable than a dedicated search API.
-- Some claims require human judgment or full-page source reading.
-- The app uses deterministic heuristics rather than a paid LLM by default.
-- Highly ambiguous claims may be marked `False` if search results do not contain enough supporting context.
+## 🎯 Example Workflow
 
-## Recommended Improvements
+### Input PDF Contains:
+```
+"TechCorp generated $5 billion in revenue in 2024."
+"The market grew 45% year-over-year."
+"We serve 2 million customers worldwide."
+```
 
-For a production-grade version:
+### App Extracts:
+```
+✓ Claim 1: Financial - "$5 billion in revenue in 2024"
+✓ Claim 2: Statistic - "45% year-over-year growth"
+✓ Claim 3: Figure - "2 million customers"
+```
 
-- Add OCR with Tesseract or a cloud OCR service.
-- Add LLM-based claim extraction and evidence adjudication.
-- Fetch and parse full source pages, not only snippets.
-- Prefer official sources and government or company filings.
-- Add citation ranking and source trust scoring.
-- Add authentication and persistent report history.
-- Add background jobs for large PDFs.
+### Web Search Finds:
+```
+Claim 1 Evidence:
+  - TechCorp Q4 2024: "$4.8 billion annual revenue"
+  → Verdict: INACCURATE (close but not exact)
 
-## Why This Approach
+Claim 2 Evidence:
+  - Industry reports: "Tech sector grew 47% in 2024"
+  → Verdict: INACCURATE (sector ≠ company)
 
-This implementation avoids mandatory paid APIs while still delivering a complete deployed web workflow. It is suitable for assignment evaluation because it provides:
+Claim 3 Evidence:
+  - Latest press release: "2M+ customers served"
+  → Verdict: VERIFIED
+```
 
-- A working upload interface.
-- Automated claim extraction.
-- Live web verification.
-- Clear verdict labels.
-- Evidence links.
-- Downloadable reporting.
+### Output Report:
+```csv
+verdict,claim,confidence,reason,correct_fact
+Inaccurate,"$5B revenue",Medium,"Web shows $4.8B for 2024","TechCorp reported $4.8B revenue in 2024"
+Inaccurate,"45% growth",Low,"Industry grew 47%, not company-specific","Tech sector grew 47% in 2024"
+Verified,"2M customers",High,"Confirmed by press release","TechCorp serves 2M+ customers"
+```
 
-For stronger accuracy in deployed testing, configure `TAVILY_API_KEY` so the app has more reliable search evidence than the free fallback.
+---
+
+## ⚠️ Limitations & Future Work
+
+### Current Limitations
+- ❌ **No OCR:** Scanned image-only PDFs not supported
+- ⚠️ **Search Quality:** Limited by free search APIs (Tavily/DuckDuckGo)
+- ⏱️ **Timeout:** 35-second max per claim (Gemini API limit)
+- 📄 **Snippet Only:** Analysis based on search snippets, not full pages
+- 🎯 **Ambiguous Claims:** High-complexity claims may be marked FALSE
+
+### Recommended Enhancements
+1. **Add OCR** - Tesseract or Google Cloud Vision
+2. **Full Page Parsing** - Fetch and analyze source pages
+3. **Source Ranking** - Prefer official/government sources
+4. **Citation Tracking** - Maintain evidence chains
+5. **Report History** - Store and compare past checks
+6. **Batch Processing** - Queue large document sets
+7. **Custom Models** - Fine-tune LLM on domain-specific data
+
+---
+
+## 📝 Example Verdicts
+
+### ✅ Verified
+```json
+{
+  "verdict": "Verified",
+  "claim": "Microsoft acquired LinkedIn in 2016.",
+  "reason": "Web evidence confirms Microsoft acquired LinkedIn in 2016.",
+  "sources": ["linkedin.com", "microsoft.com"]
+}
+```
+
+### ⚠️ Inaccurate
+```json
+{
+  "verdict": "Inaccurate",
+  "claim": "Google was founded in 2015.",
+  "reason": "Evidence shows Google was founded in 1998, not 2015.",
+  "correct_fact": "Google was founded in 1998."
+}
+```
+
+### ❌ False
+```json
+{
+  "verdict": "False",
+  "claim": "India won FIFA World Cup 2022.",
+  "reason": "Evidence contradicts: Argentina won FIFA World Cup 2022.",
+  "correct_fact": "Argentina won FIFA World Cup 2022."
+}
+```
+
+---
+
+## 📞 Support & Contributions
+
+### Issues & Bugs
+Found a bug? Please file an issue on GitHub with:
+- PDF that triggered the issue
+- Expected vs actual verdict
+- Environment details (OS, Python version)
+
+### Contributing
+Contributions welcome! Areas:
+- OCR integration
+- Additional search providers
+- Better extraction patterns
+- UI/UX improvements
+
+### Questions?
+Check the [Limitations](#limitations--future-work) section first, then file an issue.
+
+---
+
+## 📄 License
+
+This project is provided as-is for educational and assignment purposes.
+
+---
+
+## 🔗 Resources
+
+- [Google Gemini API Docs](https://ai.google.dev/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
+- [Vercel Deployment Guide](https://vercel.com/docs)
+- [pypdf Documentation](https://pypdf.readthedocs.io/)
+
+---
+
+**Last Updated:** May 9, 2026
+**Python Version:** 3.11+
+**LLM Model:** Gemini 2.5 Flash (Google)
+**Status:** ✅ Production Ready
